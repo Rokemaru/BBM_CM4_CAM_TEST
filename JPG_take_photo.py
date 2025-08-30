@@ -6,18 +6,19 @@ import piexif
 from fractions import Fraction 
 
 # ==============================================================================
-# カメラパラメータテスト用スクリプト【最終修正版 v3】
-# - Exifコメントが長すぎる問題を修正
-# - エラー発生時に詳細なトレースバックを表示するよう修正
+# カメラパラメータテスト用スクリプト【最終完成版】
+# - 保存形式をPNGからJPGに変更し、piexifエラーを解消
 # ==============================================================================
 
 def get_next_filename(directory: str) -> str:
     """指定されたディレクトリ内で、次の連番ファイル名を取得する"""
     os.makedirs(directory, exist_ok=True)
-    existing_files = [f for f in os.listdir(directory) if f.endswith('.png')]
+    # ★★ 変更点 ★★: 拡張子を.jpgに変更
+    existing_files = [f for f in os.listdir(directory) if f.endswith('.jpg')]
     
     if not existing_files:
-        return os.path.join(directory, "000.png")
+        # ★★ 変更点 ★★: 拡張子を.jpgに変更
+        return os.path.join(directory, "000.jpg")
     
     max_num = -1
     for f in existing_files:
@@ -29,7 +30,8 @@ def get_next_filename(directory: str) -> str:
             continue
             
     next_num = max_num + 1
-    return os.path.join(directory, f"{next_num:03d}.png")
+    # ★★ 変更点 ★★: 拡張子を.jpgに変更
+    return os.path.join(directory, f"{next_num:03d}.jpg")
 
 def add_exif_data(filename: str, settings: dict, metadata: dict):
     """撮影した画像にExif情報を書き込む"""
@@ -44,8 +46,6 @@ def add_exif_data(filename: str, settings: dict, metadata: dict):
             iso = int(100 * metadata["AnalogueGain"])
             exif_dict["Exif"][piexif.ExifIFD.ISOSpeedRatings] = iso
 
-        # --- ★★ 修正点 v3 ★★ ---
-        # メタデータ全体ではなく、主要な項目だけを抜粋してコメントを作成
         simple_metadata = {
             "Exp": metadata.get("ExposureTime"),
             "AGain": metadata.get("AnalogueGain"),
@@ -53,7 +53,6 @@ def add_exif_data(filename: str, settings: dict, metadata: dict):
             "Lux": round(metadata.get("Lux", 0), 2)
         }
         comment = f"Settings: {str(settings)} | Actual: {str(simple_metadata)}"
-        # --- ★★ 修正ここまで ★★ ---
 
         exif_dict["Exif"][piexif.ExifIFD.UserComment] = comment.encode("ascii", "ignore")
         
@@ -62,12 +61,9 @@ def add_exif_data(filename: str, settings: dict, metadata: dict):
         print(f"Exif情報を {filename} に書き込みました。")
 
     except Exception as e:
-        # --- ★★ 修正点 v3 ★★ ---
-        # エラー発生時に、より詳細な情報を表示する
         print(f"\nExif情報の書き込み中にエラーが発生しました: {e}")
         import traceback
         traceback.print_exc()
-        # --- ★★ 修正ここまで ★★ ---
 
 def main():
     """テストを実行するメイン関数"""
@@ -109,7 +105,7 @@ def main():
         final_save_dir = os.path.join(BASE_SAVE_DIR, save_dir_name)
         save_filepath = get_next_filename(final_save_dir)
         
-        print(f"===== カメラパラメータテスト(最終修正版 v3)を開始します =====")
+        print(f"===== カメラパラメータテスト(最終完成版)を開始します =====")
         print(f"カメラ番号: {CAM_NBR}")
         print(f"保存ファイルパス: {save_filepath}")
 
