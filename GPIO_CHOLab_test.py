@@ -38,3 +38,4 @@ except KeyboardInterrupt:
     print("\nプログラムを終了します。")
 except Exception as e:
     print(f"エラーが発生しました: {e}")
+    
