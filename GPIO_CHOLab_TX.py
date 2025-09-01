@@ -2,32 +2,47 @@ import gpiod
 import time
 
 # --- 設定 ---
-CHIP_NAME = "gpiochip4" # 古いモデルのラズパイでは "gpiochip0"
+CHIP_NAME = "gpiochip4"
 OUTPUT_PIN = 4
 # ----------------
 
-print(f"GPIO{OUTPUT_PIN}からHIGH信号の送信を開始します。")
-print("Ctrl+Cで終了します。終了時に信号はLOWに戻ります。")
+line = None
+print(f"GPIO{OUTPUT_PIN}の送信プログラムを開始します。")
 
 try:
-    # GPIOチップの制御を取得
     with gpiod.Chip(CHIP_NAME) as chip:
-        # 特定のGPIOライン（ピン）を取得
         line = chip.get_line(OUTPUT_PIN)
         
-        # ピンを「出力」、初期値を「HIGH(1)」として設定を要求
+        # ピンを「出力モード」、初期値を「LOW(0)」として要求
         line.request(
-            consumer="sender",
-            type=gpiod.LineReq.OUTPUT,
-            default_vals=[1] # 起動時にピンをHIGHにする
+            consumer="signal_sender",
+            type=gpiod.LINE_REQ_DIR_OUT,
+            default_vals=[0] # 開始時は必ずLOWにする
         )
         
-        # HIGH信号を維持するためにスクリプトを起動し続ける
+        print("準備ができました。")
+        
         while True:
-            time.sleep(1)
+            # ユーザーがエンターキーを押すのを待つ
+            input("エンターキーを長押ししている間、HIGH信号を送信します。離すと止まります...")
+            
+            # キーが押されたらHIGHを出力
+            print("-> HIGH信号を送信中...")
+            line.set_value(1)
+            
+            # ユーザーがキーを離すのを待つ（実際には次のinputで待機）
+            print("   キーが離されました。LOWに戻します。")
+            line.set_value(0)
+
 
 except KeyboardInterrupt:
-    print(f"\nプログラムを終了します。GPIO{OUTPUT_PIN}をLOWに設定しました。")
-    # with構文により、プログラム終了時にピンは自動的に解放され、信号は止まります。
+    print("\nCtrl+Cが押されました。プログラムを終了します。")
 except Exception as e:
-    print(f"エラーが発生しました: {e}")
+    print(f"\nエラーが発生しました: {e}")
+
+finally:
+    # プログラムがどんな形で終了しても、必ずピンをLOWに戻す
+    if line:
+        print("後片付け処理：ピンを確実にLOWにします。")
+        line.set_value(0)
+    print("プログラムが完全に終了しました。")
