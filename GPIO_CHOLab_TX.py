@@ -6,43 +6,33 @@ CHIP_NAME = "gpiochip4"
 OUTPUT_PIN = 4
 # ----------------
 
-line = None
 print(f"GPIO{OUTPUT_PIN}の送信プログラムを開始します。")
 
 try:
+    # 1. GPIOハードウェアへの接続を開始 (扉を開ける)
     with gpiod.Chip(CHIP_NAME) as chip:
         line = chip.get_line(OUTPUT_PIN)
-        
-        # ピンを「出力モード」、初期値を「LOW(0)」として要求
         line.request(
-            consumer="signal_sender",
-            type=gpiod.LINE_REQ_DIR_OUT,
-            default_vals=[0] # 開始時は必ずLOWにする
+            consumer="sender_final",
+            type=gpiod.LINE_REQ_DIR_OUT
         )
-        
-        print("準備ができました。")
-        
-        while True:
-            # ユーザーがエンターキーを押すのを待つ
-            input("エンターキーを長押ししている間、HIGH信号を送信します。離すと止まります...")
-            
-            # キーが押されたらHIGHを出力
-            print("-> HIGH信号を送信中...")
-            line.set_value(1)
-            
-            # ユーザーがキーを離すのを待つ（実際には次のinputで待機）
-            print("   キーが離されました。LOWに戻します。")
-            line.set_value(0)
 
+        # 2. 接続した「内側」で、メインの処理と後片付けを行う
+        try:
+            print(f"-> HIGH信号を出力中... (終了するには Ctrl+C)")
+            line.set_value(1) # 点灯
+            
+            # プログラムを動かし続けるためのループ
+            while True:
+                time.sleep(1)
+        
+        finally:
+            # 3. Ctrl+Cで中断されても、扉が閉まる「前」に必ずここが実行される
+            print("\n後片付け処理：ピンを確実にLOWに戻します。")
+            line.set_value(0) # 消灯
 
 except KeyboardInterrupt:
-    print("\nCtrl+Cが押されました。プログラムを終了します。")
+    # ユーザーがCtrl+Cを押したことを知らせるメッセージ
+    print("\nプログラムを正常に終了しました。")
 except Exception as e:
-    print(f"\nエラーが発生しました: {e}")
-
-finally:
-    # プログラムがどんな形で終了しても、必ずピンをLOWに戻す
-    if line:
-        print("後片付け処理：ピンを確実にLOWにします。")
-        line.set_value(0)
-    print("プログラムが完全に終了しました。")
+    print(f"エラーが発生しました: {e}")
