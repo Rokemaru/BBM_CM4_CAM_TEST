@@ -1,89 +1,129 @@
-# test_tuning.py
-from picamera2 import Picamera2
-import time
+# test_operator_equivalent.py
 import os
+import time
+import RPi.GPIO as GPIO
+from PIL import Image
+from picamera2 import Picamera2
+import syslog
 
-# --- テスト用の固定パラメータ ---
-# pollen_take_imaging_modeで実際に使われている値を設定します
-tuning_file = "/home/gardens/MMJ_CAM_MIS/imx219_80d.json"
-camera_num = 0  # pollenミッションはカメラ0を使用
-wide = 3280
-heigh = 2464
-shutter_speed = 20000  # 例: 20000マイクロ秒
-analogue_gain = 1.0    # 例: 1.0
+# ==============================================================================
+# Mission_Operator.pyのtake_imaging_operatorの機能を完全に再現
+# パラメータはpollenミッションを想定して固定値で設定
+# ==============================================================================
 
-# --- 1. チューニングファイルを指定して撮影 ---
-picam2_with_tuning = None
-print("--- 1. チューニングファイルありのテストを開始 ---")
+# --- ① 本来は引数で渡されるパラメータを、ここで固定値として定義 ---
+cam_nbr = 0
+tuning_file = "/home/gardens/MMJ_CAM_MIS/imx219_80d.json" # Mission.pyで指定されているパス
+wide = 1640
+heigh = 1232
+shutter_speed = 30000
+analogue_gain = 1.0
+auto_white_balance = False  # 手動ホワイトバランス
+red_Gains = 1.8
+blue_Gains = 1.5
+contrast = 1.0
+sharpness = 1.0
+saturation = 1.0
+cam_times = 5               # 5枚撮影するテスト
+interval_time = 2.0         # 撮影間隔2秒
+led_level = 50              # LED光量50%
 
-# ファイルの存在を最初に確認
-if not os.path.exists(tuning_file):
-    print(f"FATAL: チューニングファイルが見つかりません: {tuning_file}")
-else:
-    try:
-        print(f"カメラ {camera_num} をチューニングファイルありで初期化します...")
-        picam2_with_tuning = Picamera2(tuning=tuning_file, camera_num=camera_num)
-        config = picam2_with_tuning.create_still_configuration(main={"size": (wide, heigh)})
-        picam2_with_tuning.configure(config)
+# --- Mission_Prameter.pyから持ってきたLED関連の定数 ---
+LED_PIN = 18
+LED_PWM_FREQUENCY = 10000
 
-        # 比較のため、露出とWBは手動で固定します
-        ctrl = {
-            "ExposureTime": shutter_speed,
-            "AnalogueGain": analogue_gain,
-            "AwbEnable": False,
-            "ColourGains": (1.8, 1.5)  # 例としての固定値
-        }
-        picam2_with_tuning.set_controls(ctrl)
+# --- テスト用の設定 ---
+output_dir = "operator_test_output"
+os.makedirs(output_dir, exist_ok=True)
+print(f"--- 'take_imaging_operator'の単独動作テストを開始します ---")
+print(f"画像は ./{output_dir}/ に保存されます。")
+syslog.openlog("StandaloneCameraTest")
 
-        picam2_with_tuning.start()
-        print("カメラ起動。安定化のために2秒待機します...")
-        time.sleep(2)
+# ==============================================================================
+# ↓↓↓ ここから下は take_imaging_operator の中身とほぼ同じロジック ↓↓↓
+# ==============================================================================
 
-        output_file = "test_WITH_tuning.jpg"
-        print(f"撮影します... -> {output_file}")
-        picam2_with_tuning.capture_file(output_file)
-        print("撮影完了。")
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(LED_PIN, GPIO.OUT)
+pwm = GPIO.PWM(LED_PIN, LED_PWM_FREQUENCY)
+pwm.start(0)
 
-    except Exception as e:
-        print(f"エラーが発生しました: {e}")
-    finally:
-        if picam2_with_tuning:
-            picam2_with_tuning.stop()
-            picam2_with_tuning.close()
-        print("--- テスト1 終了 ---")
+picam2 = None
+saved_file_paths = []
 
-
-# --- 2. 比較のため、チューニングファイルなしで撮影 ---
-picam2_no_tuning = None
-print("\n--- 2. チューニングファイルなしのテストを開始 ---")
 try:
-    print(f"カメラ {camera_num} をチューニングファイルなしで初期化します...")
-    picam2_no_tuning = Picamera2(camera_num=camera_num)
-    config = picam2_no_tuning.create_still_configuration(main={"size": (wide, heigh)})
-    picam2_no_tuning.configure(config)
+    # --- カメラ初期化 ---
+    print(f"カメラ {cam_nbr} をチューニングファイルありで初期化中...")
+    syslog.syslog("Initializing camera with tuning file.")
+    if not os.path.exists(tuning_file):
+        raise FileNotFoundError(f"致命的エラー: チューニングファイルが見つかりません: {tuning_file}")
+    picam2 = Picamera2(tuning=tuning_file, camera_num=cam_nbr)
 
-    # 全く同じパラメータを設定します
+    # --- カメラコンフィグ設定 ---
+    camera_config = picam2.create_still_configuration(main={"size": (wide, heigh)})
+    picam2.configure(camera_config)
+    picam2.start()
+
+    # --- カメラコントロール設定 ---
     ctrl = {
         "ExposureTime": shutter_speed,
         "AnalogueGain": analogue_gain,
-        "AwbEnable": False,
-        "ColourGains": (1.8, 1.5)
+        "AwbEnable": auto_white_balance,
+        "Contrast": contrast,
+        "Saturation": saturation,
+        "Sharpness": sharpness,
     }
-    picam2_no_tuning.set_controls(ctrl)
+    if not auto_white_balance:
+        ctrl["ColourGains"] = (red_Gains, blue_Gains)
 
-    picam2_no_tuning.start()
-    print("カメラ起動。安定化のために2秒待機します...")
-    time.sleep(2)
+    print("カメラ安定化のため1秒待機...")
+    time.sleep(1.0)
+    picam2.set_controls(ctrl)
+    print("コントロール設定完了。")
 
-    output_file = "test_WITHOUT_tuning.jpg"
-    print(f"撮影します... -> {output_file}")
-    picam2_no_tuning.capture_file(output_file)
-    print("撮影完了。")
+    # --- 撮影ループ ---
+    print(f"撮影開始: {cam_times}枚")
+    pwm.ChangeDutyCycle(led_level)
+    print(f"LED点灯: {led_level}%")
+    time.sleep(1.0)  # LED安定化待ち
+
+    for i in range(cam_times):
+        # 以前提案した「おまじない」も再現
+        picam2.set_controls(ctrl)
+        time.sleep(0.2)
+
+        shot_start_time = time.monotonic()
+        raw_array = picam2.capture_array("main")
+        shot_end_time = time.monotonic()
+
+        if raw_array is not None and raw_array.size > 0:
+            elapsed = shot_end_time - shot_start_time
+            print(f"({i + 1}/{cam_times}) 撮影成功 (処理時間: {elapsed:.3f}s)")
+
+            save_path = os.path.join(output_dir, f"test_image_{i:02d}.png")
+            Image.fromarray(raw_array).save(save_path, "PNG")
+            saved_file_paths.append(save_path)
+        else:
+            print(f"({i + 1}/{cam_times}) 撮影失敗: データが空です。")
+
+        if i < cam_times - 1:
+            wait_time = interval_time - (shot_end_time - shot_start_time)
+            if wait_time > 0:
+                print(f"  -> 次の撮影まで {wait_time:.3f}秒 待機...")
+                time.sleep(wait_time)
 
 except Exception as e:
-    print(f"エラーが発生しました: {e}")
+    print(f"予期せぬエラーが発生しました: {e}")
+    syslog.syslog(f"ERROR: {e}")
 finally:
-    if picam2_no_tuning:
-        picam2_no_tuning.stop()
-        picam2_no_tuning.close()
-    print("--- テスト2 終了 ---")
+    # --- クリーンアップ処理 ---
+    print("リソースをクリーンアップします...")
+    if picam2 and picam2.started:
+        picam2.stop()
+    if picam2:
+        picam2.close()
+    
+    pwm.stop()
+    GPIO.cleanup(LED_PIN)
+    print("--- テスト完了 ---")
