@@ -14,17 +14,17 @@ import syslog
 # --- ① 本来は引数で渡されるパラメータを、ここで固定値として定義 ---
 cam_nbr = 0
 tuning_file = "/home/gardens/MMJ_CAM_MIS/imx219_80d.json" # Mission.pyで指定されているパス
-wide = 1640
-heigh = 1232
-shutter_speed = 30000
+wide = 3280
+heigh = 2464
+shutter_speed = 100000
 analogue_gain = 1.0
 auto_white_balance = False  # 手動ホワイトバランス
-red_Gains = 1.8
-blue_Gains = 1.5
+red_Gains = 0.0
+blue_Gains = 0.0
 contrast = 1.0
 sharpness = 1.0
 saturation = 1.0
-cam_times = 5               # 5枚撮影するテスト
+cam_times = 1              # 5枚撮影するテスト
 interval_time = 2.0         # 撮影間隔2秒
 led_level = 50              # LED光量50%
 
@@ -74,6 +74,7 @@ try:
         "Saturation": saturation,
         "Sharpness": sharpness,
     }
+    
     if not auto_white_balance:
         ctrl["ColourGains"] = (red_Gains, blue_Gains)
 

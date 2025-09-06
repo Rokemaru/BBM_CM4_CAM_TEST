@@ -45,7 +45,7 @@ def main():
     # --- Arducam専用設定 (CAM_NBR=0 の場合のみ有効) ---
     TUNING_FILE_PATH = "/home/gardens/Desktop/CAM_TEST/imx219_80d.json"
     # --- 撮影パラメータ ---
-    SHUTTER_SPEED = 50000  # マイクロ秒 (例: 20000 = 1/50秒)。Noneで自動露出
+    SHUTTER_SPEED = 0  # マイクロ秒 (例: 20000 = 1/50秒)。Noneで自動露出
     LED_PIN = 18           # LEDを接続しているGPIOピン(BCM番号)
     LED_LEVEL = 100        # LEDの明るさ (0% ~ 100%)
     
