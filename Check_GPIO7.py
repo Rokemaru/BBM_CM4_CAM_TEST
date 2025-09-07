@@ -37,4 +37,4 @@ except Exception as e:
     print(f"\n>>> 不明なエラーが発生しました: {e}")
 
 finally:
-    print("\nテストプログラムを終了します。")
+    print("\nテストプログラムを終了します。")										

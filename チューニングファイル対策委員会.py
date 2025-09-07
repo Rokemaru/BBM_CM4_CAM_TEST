@@ -9,7 +9,7 @@ CAM_NBR = 0
 TUNING_FILE = "/home/gardens/MMJ_CAM_MIS/imx219_80d.json" # このパスは環境に合わせてください
 WIDE = 3280
 HEIGH = 2464
-CAM_TIMES = 21
+CAM_TIMES = 3
 INTERVAL_TIME = 1.5  # 秒
 LED_LEVEL = 100      # 0から100のパーセント
 
@@ -18,13 +18,25 @@ LED_PIN = 18 # BCMピン番号
 LED_PWM_FREQUENCY = 10000 # 10KHz
 
 # 保存先フォルダ名
-OUTPUT_FOLDER = "simple_capture_output"
+OUTPUT_FOLDER = "simple_capture_output_dem4_つけてないやつ"
 
 # --- ここからがメインの処理です ---
 picam2 = None
 pwm = None
 
 try:
+    
+     #--- カメラ接続確認 (既存コードより) ---
+    #available_cameras = Picamera2.global_camera_info()
+#     if not available_cameras:
+#         print("FATAL ERROR: No cameras found. Mission aborted.")
+#         #GPIO.cleanup()
+#     if CAM_NBR >= len(available_cameras):
+#         print(f"WARNING: Camera {CAM_NBR} is not available. (Found {len(available_cameras)} cameras)")
+#         print("--> Fallback: Using default camera 0.")
+#         CAM_NBR = 0    
+    
+    
     # 1. 保存先フォルダを作成
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     print(f"画像は '{OUTPUT_FOLDER}' フォルダに保存されます。")
@@ -48,6 +60,8 @@ try:
     picam2.configure(config)
 
     controls = {
+        "ExposureTime": 2400, # シャッタースピード（マイクロ秒）
+        "AnalogueGain": 1.0, #アナログゲイン
         "AwbEnable": True,
         "Contrast": 1.0,
         "Sharpness": 1,
