@@ -53,7 +53,7 @@ elif keydata == '0':
 elif keydata == '1':
     readAddress = CHIBANY_PHOTO_COPY
 else:
-    readAddress = int(keydata)
+    readAddress = int(keydata , 16)
 
 # データ読み込み
 data = Flash.READ_DATA_BYTES2_SMF(readAddress, 4096)
