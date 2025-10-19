@@ -6,7 +6,7 @@ import RPi.GPIO as GPIO
 
 # --- 以前解析したパラメータ設定 ---
 CAM_NBR = 0
-TUNING_FILE = "/home/gardens/MMJ_CAM_MIS/imx219_80d.json" # このパスは環境に合わせてください
+TUNING_FILE = "/home/gardens/MMJ_SW_319_MMJ_CAM_MIS/imx219_80d.json" # このパスは環境に合わせてください
 WIDE = 3280
 HEIGH = 2464
 CAM_TIMES = 3
